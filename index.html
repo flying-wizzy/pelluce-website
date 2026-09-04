@@ -1,14 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pelluce</title>
   <meta name="description" content="Pelluce — coming soon.">
 
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%23131F3A'/><text x='32' y='45' font-family='Montserrat,sans-serif' font-size='40' font-weight='600' fill='%23fff' text-anchor='middle'>P</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' fill='%23131F3A'/><text x='32' y='45' font-family='Montserrat,sans-serif' font-size='40' font-weight='600' fill='%23fff' text-anchor='middle'>P</text></svg>">
 
   <link rel="preload" href="fonts/montserrat-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+
+  <script>
+    // Runs before first paint so an explicit choice never flashes the wrong theme.
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) { }
+    })();
+  </script>
 
   <style>
     @font-face {
@@ -19,10 +31,34 @@
       src: url("fonts/montserrat-latin-var.woff2") format("woff2");
     }
 
+
     :root {
+      --dark-ink: #EEF1F6;
+      --dark-ground: #131F3A;
+
       --ink: #131F3A;
       --ground: #ffffff;
+      --icon-sun: none;
+      --icon-moon: block;
       color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ink: var(--dark-ink);
+        --ground: var(--dark-ground);
+        --icon-sun: block;
+        --icon-moon: none;
+        color-scheme: dark;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --ink: var(--dark-ink);
+      --ground: var(--dark-ground);
+      --icon-sun: block;
+      --icon-moon: none;
+      color-scheme: dark;
     }
 
     body {
@@ -37,6 +73,7 @@
       font-family: Montserrat, system-ui, -apple-system, "Segoe UI", sans-serif;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     main {
@@ -62,12 +99,106 @@
       text-transform: uppercase;
       opacity: 0.6;
     }
+
+    .theme-toggle {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      display: grid;
+      place-items: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: none;
+      color: var(--ink);
+      opacity: 0.35;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+
+    .theme-toggle:hover,
+    .theme-toggle:focus-visible {
+      opacity: 0.8;
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 1px solid currentColor;
+      outline-offset: 2px;
+    }
+
+    /* `display: grid` above outranks the hidden attribute's UA style, so restate it. */
+    .theme-toggle[hidden] {
+      display: none;
+    }
+
+    .theme-toggle .sun {
+      display: var(--icon-sun);
+    }
+
+    .theme-toggle .moon {
+      display: var(--icon-moon);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
   </style>
 </head>
+
 <body>
+  <!-- hidden until the script enables it, so it is not dead furniture without JS -->
+  <button class="theme-toggle" type="button" aria-label="Switch theme" hidden>
+    <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+    <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4.5" />
+      <path
+        d="M12 1.5v2M12 20.5v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1.5 12h2M20.5 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  </button>
+
   <main>
     <h1 class="wordmark">Pelluce</h1>
     <p class="tagline">Coming soon</p>
   </main>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.querySelector(".theme-toggle");
+      var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+      btn.hidden = false;
+
+      function current() {
+        return root.dataset.theme || (systemDark.matches ? "dark" : "light");
+      }
+
+      function syncLabel() {
+        var isDark = current() === "dark";
+        btn.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+        btn.setAttribute("aria-pressed", String(isDark));
+      }
+
+      btn.addEventListener("click", function () {
+        var next = current() === "dark" ? "light" : "dark";
+        root.dataset.theme = next;
+        try { localStorage.setItem("theme", next); } catch (e) { }
+        syncLabel();
+      });
+
+      // Keep the label honest if the OS flips while the page is open.
+      systemDark.addEventListener("change", syncLabel);
+      syncLabel();
+    })();
+  </script>
 </body>
+
 </html>
